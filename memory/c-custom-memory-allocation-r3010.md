@@ -479,7 +479,8 @@ void *FreeListAllocator::allocate(size_t size, u8 alignment) {
                 prev_free_block->next = free_block->next;
             else
                 _free_blocks = free_block->next;
-        } else {
+        }
+        else {
             // Else create a new FreeBlock containing remaining memory
             FreeBlock *next_block =
                 (FreeBlock *)(pointer_math::add(free_block, total_size));
@@ -533,9 +534,11 @@ void FreeListAllocator::deallocate(void *p) {
         prev_free_block->size = block_size;
         prev_free_block->next = _free_blocks;
         _free_blocks = prev_free_block;
-    } else if ((uptr)prev_free_block + prev_free_block->size == block_start) {
+    }
+    else if ((uptr)prev_free_block + prev_free_block->size == block_start) {
         prev_free_block->size += block_size;
-    } else {
+    }
+    else {
         FreeBlock *temp = (FreeBlock *)block_start;
         temp->size = block_size;
         temp->next = prev_free_block->next;
