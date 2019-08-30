@@ -20,14 +20,22 @@ that can be called from the userspace code are referred to as *userspace functio
 Let us have *L* library that we’re going to alternate and get *L'* library, the new version. Then, *L'* will be binary compatible with L, if all following rules apply:
 
 1. **any userspace function with ,,external linkage” shall retain its external name**. Therefore, you should keep true arguments type as they appear after all `typedef` substitutions and their number.
+
 2. **no userspace function may be removed or made inline, either member or global, virtual or nonvirtual; no virtual function may be removed even for internal class**.
+
 3. **no function implementation defined in cpp file may be changed in incompatible way**, i.e. if user calls new functions in an old way, that must be plausible and behavior must be the same. A special exception holds for bugfixes, but note, that they may break workarounds;
+
 4. **layout of the first `sizeof(T)` bytes of types of directly accessible userspace global data must be the same**; this holds for both static class variables and for internal classes;
+
 5. **the size of userspace class must be the same** if it has non-inline constructors; if all constructors are inline, you should use symbol versioning of sorts to prevent access to new part of the type layout from the new function;
+
 6. **classes in hierarchy of all userspace classes must be the same and in the same order** unless the classes being moved through hierarchy are empty bases of non-dynamic class (but you still need an experiment to ensure that sizes are the same).
+
 7. **dynamicity of classes in hierarchy of userspace class must be the same except for userspace class without virtual bases, where you can make non-dynamic class after all dynamic classes in preorder**;
+
 8. **you can introduce new virtual functions overloading the old ones, except for the case of covariant overloading and overloading of function of a virtual base**. You should be assured that the call to this function will yield the same results as if it were called in a way allowed by *L* specifications;
-9. **a completely new virtual function may be added to the end of the most derived class if its hierarchy doesn’t contain any virtual base**.
+
+9.  **a completely new virtual function may be added to the end of the most derived class if its hierarchy doesn’t contain any virtual base**.
 
 ## Conclusion
 
