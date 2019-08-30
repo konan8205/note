@@ -1,0 +1,364 @@
+Author: Waldo Bastian <bastian@kde.org>
+Date: May 3, 2001
+Version: 1.1 (See bottom for change history)
+
+In this paper I would like to bring the attention to an important performance
+bottleneck in the ld.so linker on GNU/Linux systems wrt C++ programs. I will 
+try to offer some suggestions for improvement and hope that this paper will 
+lead to a discussion in the GNU/Linux community that eventually will lead to 
+a solution that addresses this problem. 
+
+It should also be noted that ld.so currently does a fine job for the things
+it was designed. The problem is that it wasn't designed for todays Linux 
+Desktop. 
+
+1. The symptoms
+===============
+
+Starting a KDE application from the command line is slow. Slow is a very 
+subjective term, but when it comes to a graphical user interface, things 
+are typically perceived as slow when there is a latency of more than 0.3 secs.
+between action and reaction. So if I click on a button, it should bring up a 
+window on my screen within 0.3 secs. If it takes longer, users tend to perceive
+the system as slow.
+
+KDE is slow. Since I am very concerned about KDE I have been looking into the 
+reason why KDE is slow. Obviously there are a number of factors that contribute
+to the problem. What we are interested in is the startup-performance which I 
+would like to define as the time it takes between the moment the binary image 
+is being executed and the moment the first visual feedback appears on the 
+screen.
+
+There are 4 major contributors to the startup-performance in a KDE application. 
+1) Time spent by the linker (ld.so) before main() is called. 
+2) Initialisation of the X server connection and Qt toolkit. 
+3) Overhead by the KDE framework
+4) Overhead by the application
+
+Since the goal is to bring the startup-performance within 0.3 secs, each
+contributor may spent on average 75ms.
+
+I mention 2), 3) and 4) to make clear that the startup-performance is not tied
+to a single element. However, each of these contributors places a limit on
+the best achievable performance. I will continue to refer to 2), 3) and 4)
+wrt performance for reference, but apart from that they are beyond the scope
+of this paper.
+
+As an example I have split up the startup times of the 'kedit' application
+into 1), 2), 3) and 4), times are measured on a Pentium III running at 500Mhz.
+All data is assumed to be already in memory so disk access should not play a 
+role.
+
+
+Table1:
+
+Activity Time Spent
+Linking 0.65 sec
+Qt app. constructor 0.13 sec
+KDE app. constructor 0.11 sec
+KEdit specific init 0.48 sec
+---------------------------------------------
+Total 1.37 sec
+
+This illustrates that run-time link performance is the major bottleneck when 
+it comes to providing a "fast" desktop environment.
+
+2. Run-time linking investigated.
+=================================
+
+The task of the runtime linker is to link an application to the shared libraries
+it needs. There are several steps involved in this process. These steps involve:
+
+1) Finding the shared libraries that are needed
+2) Loading the shared libraries into the address space of the process.
+3) Relocating addresses in the library to reflect the location in the address
+space the library was loaded to.
+4) Resolving undefined symbols in a library and/or the executable by searching 
+for these symbols in the other libraries.
+
+All these steps, with exception of step 3, are optimized. It is step 3 that is
+causing the problems:
+
+1) Finding shared libraries is optimized by means of the /etc/ld.so.cache. The 
+ldconfig utility builds an index of all libraries found in the default library
+locations and stores this index information in /etc/ld.so.cache. This cache
+allows the linker to lookup libraries faster than if it had to search the file
+system itself when looking for a certain library. If a library is not found in
+the cache, the linker has to search the filesystem anyway.
+
+2) Loading of shared libraries is cached by the Linux kernel. Only the first
+application that needs a certain library needs to actually load the library 
+from disk. Subsequent processes that need the library will make use of the same
+copy that already resides in memory.
+
+This is further optimized by the fact that the Linux kernel only loads parts of 
+the library (on a page by page basis) when these parts are actually used.
+
+4) Not all symbols are resolved at startup. Only when a symbol is used it is
+being resolved. This is called lazy binding. By specifying "LD_BIND_NOW=t" 
+before starting an application, we can instruct the linker not to use lazy 
+binding and to resolve all symbols at startup. The following table shows
+the results of lazy binding for the startup time of KEdit.
+
+Table 2:
+
+Lazy Binding Time needed for linking
+On 0.65 sec
+Off 1.17 sec
+
+Symbol lookup is further optimized by the use of hash tables which makes the 
+lookup of symbols very efficient.
+
+Lets now have a closer look at what happens in step 3)
+
+Every library that is needed by an application gets loaded to an address that 
+is unique within that process. This address may vary each time the library is
+loaded. Code that references addresses in the library must be adjusted for the
+address the library is loaded to, this is called relocation. As mentioned before,
+libraries are shared between different applications and processes. However,
+the relocation performed can be different from process to process, as such, 
+those parts of the library that need to be relocated are not shared.
+
+Let's now have a look at some numbers. When we compile and link the following
+very simple application:
+main(int argc, char *argv[]) { return 0; }
+we will see that the startup time is determined by the number of libraries 
+this code is linked against. More accurately formulated, the startup time is 
+largely determined by the number of relocations that have to be performed.
+
+The number of relocations can be counted by setting "LD_DEBUG=statistics".
+The number of relocations and the start up time is measured independently
+in case measuring the number of relocations slows down the relocation process.
+
+In the following table, the startup time is listed as a function of the 
+libraries linked. Since the libraries depend on each other, each line also
+implies the libraries listed above it. E.g. all data is cummulative.
+
+Table 3:
+
+Lazy Binding Bind all on startup
+Libraries Relocations Time Relocations Time
+C++ 945 0.01 1754 0.01
+Qt *) 22176 0.12 32892 0.20
+DCOP 22407 0.14 33669 0.24
+kdecore **) 25095 0.20 39911 0.37
+kdeui 42157 0.34 61586 0.60
+kio ***) 43739 0.44 64978 0.78
+kfile ****) 48915 0.60 73848 1.10
+kspell 49366 0.66 74707 1.22
+
+*) implies Xext, X11, SM, ICE, Xft, png, z, jpeg, Xrender
+**) implies kdefakes, dl
+***) implies kdesu, fam
+****) implies ksycoca
+
+Not only does the relocation take CPU time, it also uses up memory.
+
+Table 4:
+
+Lazy Binding Bind all on startup
+Libraries Dirty Pages *) Dirty Pages
+C++ 28 28
+Qt 135 135
+DCOP 137 137
+kdecore 162 162
+kdeui 189 189
+kio 197 197
+kfile 211 211
+kspell 213 213
+
+*) The last field of /proc/<pid>/statm. (Linux 2.2.18)
+
+Memory usage seems to be mostly caused by the .data sections of the libraries
+which contain the vtables, and to a lesser extend by the .got section.
+
+Is this a KDE specific problem?
+===============================
+
+That depends on how you look at it. The problem of long startup times is caused
+by the linker needing to do many relocations. In the case of KDE, these 
+relocations are for a great deal caused by vtable entries. KDE and Qt make
+liberal use of virtual functions and inheritance. In general every class that 
+inherits from a base class with virtual functions will need to provide a vtable
+that covers at least the virtual functions of this base class. It seems that
+each vtable entry causes a relocation, and worse, a relocation that can not be
+done lazy.
+
+An example:
+A class 'base' that defines 10 virtual functions will define a vtable for these
+10 functions. All these functions need to be relocated at startup resulting in
+10 relocations.
+
+When I now define a class "derive" that inherits "base" and that overrides a 
+single virtual function, I will get a second vtable. I now need 20 relocations.
+
+Qt is based on two fundamental classes, QObject and QWidget. QObject defines 
+about 8 virtual functions. QWidget about another 80.
+
+As a test the following (dummy) class was added to a KDE library, the class 
+overrides an existing virtual function. The class was not used in any way.
+By adding this class the number of relocations on startup increased with  
+110.
+
+class TestClass : public QWidget
+{
+public:
+  TestClass() : QWidget() { }
+  virtual void initMetaObject() { QWidget::initMetaObjet(); }
+};
+
+Now it becomes clear why linking kdeui, a library that mostly defines widgets
+who all inherit from QWidget, introduces 17000 additional relocations.
+
+So to come back to the question, is this issue specific for KDE? Maybe.
+As for a comparison. The GNOME 'gedit' application requires 2043 relocations
+with lazy binding versus 9755 relocations with complete binding. It seems
+that this application, written in C, takes more advantage of lazy binding
+than applications in the KDE framework.
+
+The following code was placed into a library as a test case:
+#include <qwidget.h>
+
+template<int T> class testclass : public QWidget 
+{
+public:
+   virtual void setSizeIncrement(int w, int h) { QWidget::setSizeIncrement(w+T, h+T); }
+};
+
+template class testclass<1>;
+...
+template class testclass<N>;
+
+Note that these classes are not being used in any way. They only get defined.
+In the table below the runtime startup performance versus the number of 
+classes is shown:
+
+Table 5:
+
+Number of Lazy Binding Delta Delta
+Classes Relocations Time Relocations Time
+1 23128 0.19 0 0.00
+2 23237 0.19 109 0.00
+3 23346 0.20 218 0.01
+5 23564 0.20 436 0.01
+10 24109 0.20 981 0.01
+20 25199 0.21 2071 0.02
+30 26289 0.22 3161 0.03
+50 28469 0.23 5341 0.04
+100 33919 0.28 10791 0.09
+200 44819 0.36 21691 0.17
+
+Each extra class introduces an extra 109 relocations and such a relocation
+takes on average 8e-6 sec (CPU dependent).
+
+4. A dirty hack: kdeinit
+========================
+
+Within KDE we have been looking for a solution to this problem. We found a
+workable solution ("hack") which addresses the problem but think that a more
+generic, fundamental and clean solution is in place.
+
+The kdeinit solution is based on the notion that instead of launching 
+applications from scratch, we start a process that links against all important
+KDE libraries. We then keep this process around in this "preloaded" state and
+when we need to start an application, we let this process fork() and start the
+application by dlopen'ing the application.
+
+Their are 3 problems with this approach:
+1) It is specific for KDE and KDE libraries
+2) The application needs to be build as an ELF shared object instead of as a
+ELF executable.
+3) All your processes are called 'kdeinit'.
+
+The two main advantages are worth this trouble though:
+1) Application startup performance is improved with 0.65 sec on average.
+(On 500Mhz PIII, this number is highly CPU bound)
+2) Memory usage is reduced with about 800kb per process.
+
+
+5. Suggestions
+==============
+
+There are two routes to improvement. 
+
+
+1) Improving efficiency of C++ vtable linking
+
+One solution could be to make run-time
+linking of vtables more efficient. If the linking/relocation of vtables could
+be postponed till the first object of that class gets constructed, I expect that
+the number of relocations during startup will drop dramatically if lazy binding 
+is enabled. KDE applications show a ratio of about 2:3 between 
+lazy and non lazy binding. The gedit example had a ratio of 1:5. If lazy binding 
+of KDE applications can be improved to a ratio of 1:5 the number of relocations 
+during startup would drop from 49366 to about 15000, which would result in the
+link time dropping from 0.65 sec to 0.20 secs if we assume a linear relation.
+
+2) pre-relocation/linking of libraries.
+
+Another solution would be to add support for pre-relocating/linking libraries 
+in the linker. This solutions is IMO a more correct approach since it solves 
+the problem in a more fundamental way. The fundamental problem is that we are
+doing a large number of relocations, over and over again (each time a KDE
+application is started) basically we have a problem and solve that problem
+over and over again. If we would solve the problem once and then reuse the
+result we can save a lot CPU cycles instead of postponing the use of those
+CPU cycles as we would do with solution 1.
+
+There are a few decisions one can make when pre-relocating libraries.
+Who will pre-relocate/link and when? Are the results stored on disk or in 
+memory? Are the results shared between different users?
+
+When linking a library (and to a smaller degree when relocating) the result
+is dependent on the other libraries. That means that the validity of a 
+pre-relocated/linked library depends on the other libraries that it depends on.
+
+With kdeinit this problem is solved in an easy but crude way. When kdeinit 
+starts the libraries that are to be used are fixated, changes made to a library,
+like upgrades, will not take effect until kdeinit is restarted. This way
+the pre-relocated/lnked set of libraries will always remain in a consistent
+state.
+
+Although I consider this a crude way, it should be noted that most of the time,
+especially if the owner of the system is not a KDE developer him or herself,
+libraries do not change. Assuming that someone updates his system once a month,
+that means that 29 out of 30 days his libraries remain the same.
+
+
+6. Interesting papers
+=====================
+
+Dynamic Linking and Loading
+http://iecc.com/linker/linker10.html
+
+Cross-Address Space Dynamic Linking
+http://www.sun.com/research/techrep/1992/smli_tr-92-2.pdf
+
+High Performance Dynamic Linking Through Caching
+http://www.usenix.org/publications/library/proceedings/cinci93/full_papers/nelson.txt
+
+Neutrino (R) System Architecture Guide -
+Dynamic Linking in Neutrino
+http://www.qnx.com/literature/nto_sysarch/dll.html
+
+Linker and Libraries Guide
+http://docsun.cso.uiuc.edu:80/cgi-bin/nph-dweb/ab2/coll.45.5/LLM/@Ab2PageView/idmatch(CHAPTER6-35405)#CHAPTER6-35405?
+
+M. Franz. Dynamic linking of software components. 
+IEEE Computer, vol 30, no 3, pp 74-81, March 1997. 
+(Does anyone have this one for me?)
+
+
+7. Change History
+=================
+
+Version 1.0:
+
+Initial version
+
+
+Version 1.1:
+
+Added Change History
+Added Table numbering
+Added Table 5
