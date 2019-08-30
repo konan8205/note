@@ -4,7 +4,7 @@ https://software.intel.com/en-us/articles/using-tasking-to-scale-game-engine-sys
 
 # Using Tasking to Scale Game Engine Systems
 
-*By Yannis Minadakis, published on February 28, 2011*
+**By Yannis Minadakis, published on February 28, 2011**
 
 ## Download Article or Visit Game Tasking HomePage
 

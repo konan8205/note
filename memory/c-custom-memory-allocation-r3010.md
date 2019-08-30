@@ -4,7 +4,9 @@ https://www.gamedev.net/articles/programming/general-and-gameplay-programming/c-
 
 # C++: Custom memory allocation
 
-**By Tiago Costa, April 15, 2013, [Posted By Aqua Costa](https://www.gamedev.net/profile/147695-tiagocosta/)**
+By Tiago Costa\
+April 15, 2013\
+[Posted By Aqua Costa](https://www.gamedev.net/profile/147695-tiagocosta/)
 
 Fast memory allocations along with memory leak detection can have a big impact on games performance. C++ provides two well known functions to allocate dynamic (heap) memory (*malloc* and *new*), these functions are usually very slow because they're general purpose functions and in some implementations require a context-switch from user mode into kernel mode. These functions also do not provide any kind of memory leak detection system natively. Using custom allocators we can have well defined usage patterns and optimize the allocation process accordingly.
 
