@@ -45,7 +45,7 @@ We should also note that the current `gcc` ABI is influenced by the desire to ke
 
 ## References
 
-1. Urlich Drepper. [*How To Write Shared Libraries. 2006.*](https://software.intel.com/sites/default/files/m/a/1/e/dsohowto.pdf)
+1. Urlich Drepper. [*How To Write Shared Libraries. 2006.*](https://akkadia.org/drepper/dsohowto.pdf)
 2. E. Gamma et. all [*Design Patterns: Elements of Reusable Object-Oriented Software*](https://github.com/dieforfree/edsebooks/blob/master/ebooks/Design%20Patterns%2C%20Elements%20of%20Reusable%20Object-Oriented%20Software.pdf)
 3. [*Binary Compatibility Issues With C++*.](https://community.kde.org/Policies/Binary_Compatibility_Issues_With_C%2B%2B)
 4. [*Using the GNU Compiler Collection (GCC)*, chapter 9](http://gcc.gnu.org/onlinedocs/gcc/Compatibility.html)
