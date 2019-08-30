@@ -1,0 +1,3 @@
+[submodule "memory/mtrebi-memory-allocators"]
+	path = memory/mtrebi-memory-allocators
+	url = https://github.com/mtrebi/memory-allocators
