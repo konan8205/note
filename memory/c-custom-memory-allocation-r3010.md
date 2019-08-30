@@ -716,8 +716,8 @@ A large block of memory should be allocated when the program starts using *mallo
 
 ## Tips & Tricks
 
--Depending on the type of allocator, keep the number of individual allocations to a minimum to reduce the memory wasted by allocation headers.
--Prefer using *allocateArray()* to individual allocations when it makes sense. Most allocators will use extra memory in each allocation to store *allocation headers* and arrays will only need single header.
+- Depending on the type of allocator, keep the number of individual allocations to a minimum to reduce the memory wasted by allocation headers.
+- Prefer using *allocateArray()* to individual allocations when it makes sense. Most allocators will use extra memory in each allocation to store *allocation headers* and arrays will only need single header.
 - Instead of making small size allocations from allocators with large amounts of memory available, allocate a single memory block capable of holding all the small allocations and create a new allocator to manage the memory block and make the small allocations from this block.
 
 ## Performance Comparison
@@ -770,9 +770,9 @@ There isn't a single best allocator - it's important to think about how the memo
 
 ## Reference
 
-http://bitsquid.blogspot.pt/2010/09/custom-memory-allocation-in-c.html Game Engine Architecture, Jason Gregory 2009
-
-http://molecularmusings.wordpress.com/2011/07/05/memory-system-part-1/
+- [Game Engine Architecture, Jason Gregory 2009](http://www.gameenginebook.com/)
+- http://bitsquid.blogspot.pt/2010/09/custom-memory-allocation-in-c.html
+- http://molecularmusings.wordpress.com/2011/07/05/memory-system-part-1/
 
 ## Article Update Log
 
