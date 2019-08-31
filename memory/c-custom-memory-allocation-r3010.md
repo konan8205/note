@@ -2,19 +2,33 @@
 https://www.gamedev.net/articles/programming/general-and-gameplay-programming/c-custom-memory-allocation-r3010/
 -->
 
+<!--
+Each line must not exceed 80 characters.
+-->
+
 # C++: Custom memory allocation
 
 By Tiago Costa\
 April 15, 2013\
 [Posted By Aqua Costa](https://www.gamedev.net/profile/147695-tiagocosta/)
 
-Fast memory allocations along with memory leak detection can have a big impact on games performance. C++ provides two well known functions to allocate dynamic (heap) memory (*malloc* and *new*), these functions are usually very slow because they're general purpose functions and in some implementations require a context-switch from user mode into kernel mode. These functions also do not provide any kind of memory leak detection system natively. Using custom allocators we can have well defined usage patterns and optimize the allocation process accordingly.
+Fast memory allocations along with memory leak detection can have a big impact
+on games performance. C++ provides two well known functions to allocate dynamic
+(heap) memory (*malloc* and *new*), these functions are usually very slow
+because they're general purpose functions and in some implementations require a
+context-switch from user mode into kernel mode. These functions also do not
+provide any kind of memory leak detection system natively. Using custom
+allocators we can have well defined usage patterns and optimize the allocation
+process accordingly.
 
-Source code is available in the Aqua Engine at https://github.com/tiagovcosta/aquaengine (under Core/Allocators).
+Source code is available in the Aqua Engine at
+https://github.com/tiagovcosta/aquaengine (under Core/Allocators).
 
 ## Base Allocator
 
-Every allocator in this articles series will be derived from the class Allocator that declares 2 virtual functions (*allocate* and *deallocate*) that must be defined by each allocator.
+Every allocator in this articles series will be derived from the class Allocator
+that declares 2 virtual functions (*allocate* and *deallocate*) that must be
+defined by each allocator.
 
 **Allocator.h**
 
@@ -115,25 +129,45 @@ void deallocateArray(Allocator &allocator, T *array) {
 
 ### Memory leak detection
 
-In the code above you can see an assert in the destructor, this is a simple and easy way to check if you forgot to deallocate any memory, that won't cause any overhead or take any extra memory. This simple method won't tell which allocation you forgot to deallocate but it will pin point in which allocator the leak occured so you can find the leak faster (especially if you use Proxy Allocators like I suggest later in this article).
+In the code above you can see an assert in the destructor, this is a simple and
+easy way to check if you forgot to deallocate any memory, that won't cause any
+overhead or take any extra memory. This simple method won't tell which
+allocation you forgot to deallocate but it will pin point in which allocator the
+leak occured so you can find the leak faster (especially if you use Proxy
+Allocators like I suggest later in this article).
 
 ## Aligned Allocations
 
-Processors access memory in word-sized blocks, so when a processor tries to access memory in an unaligned address it might have to access more word-sized memory blocks than would be needed if the memory was aligned and perform masking/shifting to get the required data in the register. Example: A processor accesses memory in 4-byte words (it can only directly access the words starting at (0x00, 0x04, 0x08, 0x0C,...). If it needs to access data (4 bytes) stored at the address 0x0B it will have to read two word-sized blocks (the address 0x08 and the address 0x0C) because the data crosses the boundary from one of the blocks to the other:
+Processors access memory in word-sized blocks, so when a processor tries to
+access memory in an unaligned address it might have to access more word-sized
+memory blocks than would be needed if the memory was aligned and perform
+masking/shifting to get the required data in the register.
+
+Example: A processor accesses memory in 4-byte words (it can only directly
+access the words starting at (0x00, 0x04, 0x08, 0x0C,...). If it needs to access
+data (4 bytes) stored at the address 0x0B it will have to read two word-sized
+blocks (the address 0x08 and the address 0x0C) because the data crosses the
+boundary from one of the blocks to the other:
 
 ![](./c-custom-memory-allocation-r3010/ccs-147695-0-32422100-1365684418.jpg)
 
-If the data was stored in an aligned address like 0x0C the processor could read it in a single memory access:
+If the data was stored in an aligned address like 0x0C the processor could read
+it in a single memory access:
 
 ![](./c-custom-memory-allocation-r3010/ccs-147695-0-35282800-1365684421.jpg)
 
 ### Aligned data definition
 
-Primitive data is said to be aligned if the memory address where it is stored is a multiple of the size of the primitive. A data aggregate is said to be aligned if each primitive element in the aggregate is aligned.
+Primitive data is said to be aligned if the memory address where it is stored is
+a multiple of the size of the primitive. A data aggregate is said to be aligned
+if each primitive element in the aggregate is aligned.
 
 ### Implementation
 
-To **n**-byte align a memory address **x** we need to mask off the log2(**n**) least significant bits from **x**. Simply masking off bits will return the first **n**-byte aligned address before **x**, so in order to find the first after **x** we just need to add *alignment-1* to **x** and mask that address.
+To **n**-byte align a memory address **x** we need to mask off the log2(**n**)
+least significant bits from **x**. Simply masking off bits will return the first
+**n**-byte aligned address before **x**, so in order to find the first after
+**x** we just need to add *alignment-1* to **x** and mask that address.
 
 ```
 inline void *alignForward(void *address, u8 alignment) {
@@ -143,7 +177,8 @@ inline void *alignForward(void *address, u8 alignment) {
 }
 ```
 
-It can be useful to calculate by how many bytes the address needs to adjusted to be aligned.
+It can be useful to calculate by how many bytes the address needs to adjusted to
+be aligned.
 
 ```
 inline u8 alignForwardAdjustment(const void *address, u8 alignment) {
@@ -157,7 +192,8 @@ inline u8 alignForwardAdjustment(const void *address, u8 alignment) {
 }
 ```
 
-Some allocators need to store an header before each allocation so they can use the adjustment space to reduce the memory overhead caused by the headers.
+Some allocators need to store an header before each allocation so they can use
+the adjustment space to reduce the memory overhead caused by the headers.
 
 ```
 inline u8 alignForwardAdjustmentWithHeader(const void *address, u8 alignment,
@@ -183,7 +219,9 @@ The alignment must be a power of 2!
 
 ## Linear Allocator
 
-A Linear Allocator is the simplest and fastest type of allocator. Pointers to the start of the allocator, to the first free address and the total size of the allocator are maintained.
+A Linear Allocator is the simplest and fastest type of allocator. Pointers to
+the start of the allocator, to the first free address and the total size of the
+allocator are maintained.
 
 ### Allocations
 
@@ -191,7 +229,8 @@ New allocations simply move the pointer to the first free address forward.
 
 ### Deallocations
 
-Individual deallocations cannot be made in linear allocators, instead use clear() to completely clear the memory used by the allocator.
+Individual deallocations cannot be made in linear allocators, instead use
+clear() to completely clear the memory used by the allocator.
 
 ### Implementation
 
@@ -261,24 +300,34 @@ void LinearAllocator::clear() {
 
 ## Stack Allocator
 
-A Stack Allocator, like the name says, works like a stack. Along with the stack size, three pointers are maintained:
+A Stack Allocator, like the name says, works like a stack. Along with the stack
+size, three pointers are maintained:
 
 - Pointer to the start of the stack.
 - Pointer to the top of the stack.
-- Pointer to the last allocation made. (This is optional in release builds)
+- Pointer to the last allocation made.
+  (This is optional in release builds)
 
 ### Allocations
 
-New allocations move the pointer up by the requested number of bytes plus the adjustment needed to align the address and store the *allocation header*. The *allocation header* provides the following information:
+New allocations move the pointer up by the requested number of bytes plus the
+adjustment needed to align the address and store the *allocation header*. The
+*allocation header* provides the following information:
 
 - Adjustment used in this allocation
 - Pointer to the previous allocation
 
 ### Deallocations
 
-Memory must be deallocated in inverse order it was allocated! So if you allocate object A and then object B you must free object B memory before you can free object A memory.
+Memory must be deallocated in inverse order it was allocated! So if you allocate
+object A and then object B you must free object B memory before you can free
+object A memory.
 
-To deallocate memory the allocator checks if the address to the memory that you want to deallocate corresponds to the address of the last allocation made. If so the allocator accesses the *allocation header* so it also frees the memory used to align the allocation and store the allocation header, and it replaces the pointer to the last allocation made with the one in the *allocation header*.
+To deallocate memory the allocator checks if the address to the memory that you
+want to deallocate corresponds to the address of the last allocation made. If so
+the allocator accesses the *allocation header* so it also frees the memory used
+to align the allocation and store the allocation header, and it replaces the
+pointer to the last allocation made with the one in the *allocation header*.
 
 ### Implementation
 
@@ -382,27 +431,37 @@ void StackAllocator::deallocate(void *p) {
 }
 ```
 
-Storing the last previous allocations in a list-like fashion and checking it before deallocations is not mandatory so it can be disabled in release builds. It's just helpful to prevent memory from being overwritten causing bugs.
+Storing the last previous allocations in a list-like fashion and checking it
+before deallocations is not mandatory so it can be disabled in release builds.
+It's just helpful to prevent memory from being overwritten causing bugs.
 
 ## FreeList Allocator
 
-The FreeList allocator allows allocations of any size to be made (inside the available memory) and deallocations in any order. A linked-list of free blocks of memory is maintained (each free block contains information about its size and a pointer to the next free block).
+The FreeList allocator allows allocations of any size to be made (inside the
+available memory) and deallocations in any order. A linked-list of free blocks
+of memory is maintained (each free block contains information about its size and
+a pointer to the next free block).
 
 ### Allocations
 
-The allocator tries to find a free block large enough for the allocation to fit, if it finds multiple free blocks that meet the requeriments, there's 3 simple ways to decide which free block to choose:
+The allocator tries to find a free block large enough for the allocation to fit,
+if it finds multiple free blocks that meet the requeriments, there's 3 simple
+ways to decide which free block to choose:
 
 - First-fit - Use the first.
 - Best-fit - Use the smallest.
 - Worst-fit - Use the largest.
 
-The best-fit method will in most cases cause less fragmentation than the other 2 methods.
+The best-fit method will in most cases cause less fragmentation than the other
+2 methods.
 
 In the example implementation below I use the first-fit method.
 
 ### Deallocation
 
-The allocator keeps the free blocks orderer by the start position. When an allocation is freed the allocator finds the right position in the free blocks list and tries to merge it with the adjacent blocks.
+The allocator keeps the free blocks orderer by the start position. When an
+allocation is freed the allocator finds the right position in the free blocks
+list and tries to merge it with the adjacent blocks.
 
 ### Implementation
 
@@ -560,9 +619,17 @@ void FreeListAllocator::deallocate(void *p) {
 
 ## Pool Allocator
 
-This allocator only allows allocations of a fixed size and alignment to be made, this results in both fast allocations and deallocations to be made. Like the FreeList allocator, a linked-list of free blocks is maintaied but since all blocks are the same size each free block only needs to store a pointer to the next one. Another advantage of Pool allactors is no need to align each allocation, since all allocations have the same size/alignment only the first block has to be aligned, this results in a almost non-existant memory overhead.
+This allocator only allows allocations of a fixed size and alignment to be made,
+this results in both fast allocations and deallocations to be made. Like the
+FreeList allocator, a linked-list of free blocks is maintaied but since all
+blocks are the same size each free block only needs to store a pointer to the
+next one. Another advantage of Pool allactors is no need to align each
+allocation, since all allocations have the same size/alignment only the first
+block has to be aligned, this results in a almost non-existant memory overhead.
 
-The block size of the Pool Allocator must be larger than *sizeof(void\*)* because when blocks are free they store a pointer to the next free block in the list.
+The block size of the Pool Allocator must be larger than *sizeof(void\*)*
+because when blocks are free they store a pointer to the next free block in the
+list.
 
 ### Allocations
 
@@ -650,7 +717,18 @@ void PoolAllocator::deallocate(void *p) {
 
 ## Proxy Allocator
 
-A Proxy Allocator is a special kind of allocator. It is just used to help with memory leak and subsystem memory usage tracking. It will simply redirect all allocations/deallocations to the allocator passed as argument in the constructor while keeping track of how many allocations it made and how much memory it is "using". Example: Two subsystems use the same allocator A. If you want to show in the debugging user interface how much memory each subsystem is using, you create a proxy allocator, that redirects all allocations/deallocations to A, in each subsystem and track their memory usage. It will also help in memory leak tracking because the assert in the proxy allocator destructor of the subsystem that is leaking memory will fail.
+A Proxy Allocator is a special kind of allocator. It is just used to help with
+memory leak and subsystem memory usage tracking. It will simply redirect all
+allocations/deallocations to the allocator passed as argument in the constructor
+while keeping track of how many allocations it made and how much memory it is
+"using".
+
+Example: Two subsystems use the same allocator A. If you want to show in the
+debugging user interface how much memory each subsystem is using, you create a
+proxy allocator, that redirects all allocations/deallocations to A, in each
+subsystem and track their memory usage. It will also help in memory leak
+tracking because the assert in the proxy allocator destructor of the subsystem
+that is leaking memory will fail.
 
 ### Implementation
 
@@ -707,31 +785,61 @@ void ProxyAllocator::deallocate(void *p) {
 
 ## Allocator Managment
 
-A large block of memory should be allocated when the program starts using *malloc* (and this should be the only malloc made) this large block of memory is managed by a global allocator (for example a stack allocator). Each subsystem should then allocate the block of memory it needs to work from the global allocator, and create allocators that will manage that memory.
+A large block of memory should be allocated when the program starts using
+*malloc* (and this should be the only malloc made) this large block of memory is
+managed by a global allocator (for example a stack allocator). Each subsystem
+should then allocate the block of memory it needs to work from the global
+allocator, and create allocators that will manage that memory.
 
 ### Example usage
 
-- Allocate 1GB of memory using malloc and create a FreeList allocator to manage that memory.
-- Create a Proxy allocator that redirects all allocations to the FreeList allocator.
-- Initialize the Resource Manager by passing a pointer to the Proxy allocator in the constructor.
-- Register the Proxy allocator in the memory usage tracker so it shows how much memory the Resource Manager is using.
-- Allocate 16MB of memory using the FreeList allocator and create a Linear allocator to manage that memory and register it in the memory usage tracker.
-- Use the Linear allocator to make small temporary allocations needed for game logic, etc, and clear it before the end of each frame.
-- The Resource Manager will create a Pool allocator for every ResourcePackage it loads.
+- Allocate 1GB of memory using malloc and create a FreeList allocator to manage
+  that memory.
+
+- Create a Proxy allocator that redirects all allocations to the FreeList
+  allocator.
+
+- Initialize the Resource Manager by passing a pointer to the Proxy allocator in
+  the constructor.
+
+- Register the Proxy allocator in the memory usage tracker so it shows how much
+  memory the Resource Manager is using.
+
+- Allocate 16MB of memory using the FreeList allocator and create a Linear
+  allocator to manage that memory and register it in the memory usage tracker.
+
+- Use the Linear allocator to make small temporary allocations needed for game
+  logic, etc, and clear it before the end of each frame.
+
+- The Resource Manager will create a Pool allocator for every ResourcePackage it
+  loads.
 
 ## Tips & Tricks
 
-- Depending on the type of allocator, keep the number of individual allocations to a minimum to reduce the memory wasted by allocation headers.
-- Prefer using *allocateArray()* to individual allocations when it makes sense. Most allocators will use extra memory in each allocation to store *allocation headers* and arrays will only need single header.
-- Instead of making small size allocations from allocators with large amounts of memory available, allocate a single memory block capable of holding all the small allocations and create a new allocator to manage the memory block and make the small allocations from this block.
+- Depending on the type of allocator, keep the number of individual allocations
+  to a minimum to reduce the memory wasted by allocation headers.
+
+- Prefer using *allocateArray()* to individual allocations when it makes sense.
+  Most allocators will use extra memory in each allocation to store *allocation*
+  *headers* and arrays will only need single header.
+
+- Instead of making small size allocations from allocators with large amounts of
+  memory available, allocate a single memory block capable of holding all the
+  small allocations and create a new allocator to manage the memory block and
+  make the small allocations from this block.
 
 ## Performance Comparison
 
-To test the performance of each allocator compared to *malloc* I wrote a program that measures how long it takes to make 20000 allocations (you can download the program in the end of the article), the tests where made in release mode and the results are averages of 3 runs.
+To test the performance of each allocator compared to *malloc* I wrote a program
+that measures how long it takes to make 20000 allocations (you can download the
+program in the end of the article), the tests where made in release mode and the
+results are averages of 3 runs.
 
 ### Malloc vs Linear Allocator
 
-10k 16 bytes allocations + 1k 256 bytes allocations + 50 2Mb allocations/deallocations (allocations made using the linear allocator are deallocated in a single call to clear().
+10k 16 bytes allocations + 1k 256 bytes allocations + 50 2Mb
+allocations/deallocations (allocations made using the linear allocator are
+deallocated in a single call to clear().)
 
 ```
 Allocator       Time (s)
@@ -741,7 +849,8 @@ Linear          0.000072
 
 ### Malloc vs Stack Allocator
 
-10k 16 bytes allocations + 1k 256 bytes allocations + 50 2Mb allocations/deallocations
+10k 16 bytes allocations + 1k 256 bytes allocations + 50 2Mb
+allocations/deallocations
 
 ```
 Allocator       Time (s)
@@ -751,7 +860,8 @@ Stack           0.000289
 
 ### Malloc vs FreeList Allocator
 
-10k 16 bytes allocations + 1k 256 bytes allocations + 50 2Mb allocations/deallocations
+10k 16 bytes allocations + 1k 256 bytes allocations + 50 2Mb
+allocations/deallocations
 
 ```
 Allocator       Time (s)
@@ -771,19 +881,25 @@ Pool            0.000193
 
 ## Conclusion
 
-There isn't a single best allocator - it's important to think about how the memory will be allocated/accessed/deallocated and choose the right allocator for each situation. **Full source code and performance tests in the attached file**
+There isn't a single best allocator - it's important to think about how the
+memory will be allocated/accessed/deallocated and choose the right allocator for
+each situation. **Full source code and performance tests in the attached file**
 
 ## Reference
 
 - [Game Engine Architecture, Jason Gregory 2009](http://www.gameenginebook.com/)
+
 - http://bitsquid.blogspot.pt/2010/09/custom-memory-allocation-in-c.html
+
 - http://molecularmusings.wordpress.com/2011/07/05/memory-system-part-1/
 
 ## Article Update Log
 
-**04 March 2014:** Rewritten *FreeListAllocator*, added support to x64. (Also updated code style and added a new test).
+**04 March 2014:** Rewritten *FreeListAllocator*, added support to x64. (Also
+                   updated code style and added a new test).
 
-**16 November 2013**: Fixed two errors in *FreeListAllocator.cpp* lines 48 and 60
+**16 November 2013**: Fixed two errors in *FreeListAllocator.cpp* lines 48 and
+                      60
 
 **14 April 2013**: Fixed an error in *allocateArray*
 
