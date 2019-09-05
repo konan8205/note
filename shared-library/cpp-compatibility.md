@@ -27,7 +27,7 @@ other classes are *internal*. The functions that can be called from the
 userspace code are referred to as *userspace functions*.
 
 Let us have *L* library that we’re going to alternate and get *L'* library, the
-new version. Then, *L'* will be binary compatible with L, if all following rules
+new version. Then, *L'* will be binary compatible with *L*, if all following rules
 apply:
 
 1. **any userspace function with *external linkage* shall retain its external**
