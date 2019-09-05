@@ -1344,11 +1344,11 @@ copy.
 [2]: http://xahlee.org/UnixResource_dir/_/ldpath.html
 [3]: https://community.kde.org/Policies/Binary_Compatibility_Issues_With_C%2B%2B
 [4]: http://www.muppetlabs.com/~breadbox/software/tiny/teensy.html
-[5]: ./howto/Making%20C%2B%2B%20ready%20for%20the%20desktop.txt
+[5]: ./lib-howto/Making%20C%2B%2B%20ready%20for%20the%20desktop.txt
 [6]: https://lwn.net/Articles/387122/
 [7]: https://www.ibm.com/developerworks/library/l-lsb/
 [8]: https://akkadia.org/drepper/dsohowto.pdf
-[9]: ./howto/elf.hps.pdf
+[9]: ./lib-howto/elf.hps.pdf
 [10]: https://www.linux.co.cr/free-unix-os/review/acrobat/950517.pdf
 [11]: https://www.ibm.com/developerworks/library/l-shlibs/index.html
 
