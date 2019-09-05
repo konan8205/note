@@ -69,9 +69,9 @@ out this operation.
 **Figure 1**
 
 The task engine code is in `TaskScheduler.h/.inl/.cpp` (header, inlines, and
-code). `CTaskPool` is primarily a collection of `CWorkerThread`, where the bulk of
-the logic resides. `CInternalTask` is the abstract superclass for all tasks; you
-will use subclasses of this class in the implementation of ParallelFor and
+code). `CTaskPool` is primarily a collection of `CWorkerThread`, where the bulk
+of the logic resides. `CInternalTask` is the abstract superclass for all tasks;
+you will use subclasses of this class in the implementation of ParallelFor and
 `CSorter`.
 
 ParallelFor is the simplest form of parallel code: a loop where iterations can
@@ -107,8 +107,8 @@ Your specific task is implemented by `CMyTask` and you use Flag to track when it
 is done. (Note that pThread must be the current thread.) Once PushTask has been
 called, the task is eligible to be executed by the scheduler, or may be stolen
 by another thread. The current thread can continue to do other things, including
-pushing more tasks, until it calls `WorkUntilDone`. This last call will run tasks
-from the thread's pile, or attempt to steal from other threads, until the
+pushing more tasks, until it calls `WorkUntilDone`. This last call will run
+tasks from the thread's pile, or attempt to steal from other threads, until the
 completion flag is set. Again, it looks as if your task had been executed
 serially as part of the call (and it might have, indeed).
 
@@ -133,16 +133,16 @@ of steps which remain easy to read.
 
 ## Inside the scheduler
 
-Looking at what is happening inside, you see `CTaskPool` is the central object; it
-creates and holds the worker threads. Initially, these are blocked waiting on a
-semaphore, the scheduler is idle and consumes no CPU. As soon as the first task
-is submitted, it is split between all threads (if possible) and the semaphore is
-raised by `worker_count` in one step, waking all threads as close to immediately
-as possible. The pool keeps track of the completion flag for this root task and
-workers keep running until it becomes set. Once done, all threads go idle again
-and a separate semaphore is used to make sure all threads are back to idle
-before accepting any new task. Conceptually, all workers are always in the same
-state: either all idle or all running.
+Looking at what is happening inside, you see `CTaskPool` is the central object;
+it creates and holds the worker threads. Initially, these are blocked waiting on
+a semaphore, the scheduler is idle and consumes no CPU. As soon as the first
+task is submitted, it is split between all threads (if possible) and the
+semaphore is raised by `worker_count` in one step, waking all threads as close
+to immediately as possible. The pool keeps track of the completion flag for this
+root task and workers keep running until it becomes set. Once done, all threads
+go idle again and a separate semaphore is used to make sure all threads are back
+to idle before accepting any new task. Conceptually, all workers are always in
+the same state: either all idle or all running.
 
 The role of `CWorkerThread` is to handle tasks, which can be broken down into
 processing, queuing, and stealing them.
@@ -264,7 +264,8 @@ Reinders, James. Intel Threading Building Blocks. USA: O'Reilly Media, Inc.,
 Pietrek, Matt. Remove Fatty Deposits From Your Applications Using Our 32-Bit
 Liposuction Tools. Microsoft Systems Journal, October 1996 issue.
 
-Ericson Christer. Order your graphics draw calls around! http://realtimecollisiondetection.net/blog/?p=86
+Ericson Christer. Order your graphics draw calls around!
+http://realtimecollisiondetection.net/blog/?p=86
 
 ## About the Author
 

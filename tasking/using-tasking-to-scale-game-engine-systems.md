@@ -3,7 +3,8 @@ https://software.intel.com/en-us/articles/using-tasking-to-scale-game-engine-sys
 -->
 
 <!--
-Each line must not exceed 80 characters, except for link description and example codes.
+Each line must not exceed 80 characters,
+except for link description and example codes.
 -->
 
 # Using Tasking to Scale Game Engine Systems
@@ -41,7 +42,8 @@ into a tasking animation system.
   Tasksets execute only when their dependencies have been satisfied.
 
 - **Scheduler:** The scheduler is internal to the Tasking API. The scheduler is
-  responsible for creating and managing all the worker threads and executing the tasks.
+  responsible for creating and managing all the worker threads and executing the
+  tasks.
 
 The sample uses Intel® Threading Building Blocks as its scheduler.
 
@@ -105,10 +107,10 @@ the set of heuristics below for optimal task execution.
   to find the right balance.
 
 - **Target the working set of the task to 1/4 of the L2 cache size.** Many CPUs
-  feature *Intel® Hyper-Threading Technology*, so there will be two worker threads
-  per physical core. Targeting 1/4 of the cache per task should allow for
-  optimal cache use. Using the task ID and task count to vary the amount of data
-  processed per task is the best way to find the right balance.
+  feature *Intel® Hyper-Threading Technology*, so there will be two worker
+  threads per physical core. Targeting 1/4 of the cache per task should allow
+  for optimal cache use. Using the task ID and task count to vary the amount of
+  data processed per task is the best way to find the right balance.
 
 - **Use the context ID instead of locking and interlocked instructions.**
   Locking inside a task will block that worker thread severely reducing task
@@ -242,14 +244,15 @@ heavily CPU bound scenario.
 
 
 Figure 5 shows the performance cost of increasing the number of animating models
-in the sample. The data was gathered on an *Intel® Core™ i7 processor*-based system
-with *ATI Radeon\* HD 5870 graphics*. Note that as we increase the number of
-animating objects we scale efficiently without specializing the code to the core
-count.
+in the sample. The data was gathered on an *Intel® Core™ i7 processor*-based
+system with *ATI Radeon\* HD 5870 graphics*. Note that as we increase the number
+of animating objects we scale efficiently without specializing the code to the
+core count.
 
 ![34577-figure-5.jpg][105]
 
-**Figure 5.** *Performance data from animation sample. Time is in milliseconds per frame. Lower values mean higher performance.*
+**Figure 5.** *Performance data from animation sample.*
+*Time is in milliseconds per frame. Lower values mean higher performance.*
 
 ## References
 

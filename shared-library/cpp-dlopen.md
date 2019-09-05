@@ -4,7 +4,7 @@ https://www.tldp.org/HOWTO/pdf/C++-dlopen.pdf
 -->
 
 <!--
-Each line must not exceed 80 characters.
+Each line must not exceed 80 characters, except for link description.
 -->
 
 # C++ dlopen mini HOWTO
