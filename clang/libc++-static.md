@@ -14,21 +14,20 @@ Note that static libraries must be linked in dependency order.
 ### Set environment variables
 ```
 LIBCPP_INCLUDE="/usr/include/c++/v1"
-LIBCPP_STATIC="/usr/lib/x86_64-linux-gnu/libc++.a /usr/lib/x86_64-linux-gnu/
-libc++abi.a"
+LIBCPP_STATIC="/usr/lib/x86_64-linux-gnu/libc++.a
+/usr/lib/x86_64-linux-gnu/libc++abi.a"
 ```
 
 ### Create object file(s)
-1. ```
-   clang++ -std=c++17 -nostdlib++ -nostdinc++ -pthread -I$LIBCPP_INCLUDE main.cpp \
-   $LIBCPP_STATIC
-   ```
-2. ```
-   clang++ -std=c++17 -nostdinc++ -I$LIBCPP_INCLUDE -c main.cpp
-   ```
+```
+clang++ -std=c++17 -nostdlib++ -nostdinc++ -I$LIBCPP_INCLUDE \
+main.cpp $LIBCPP_STATIC
+```
 
 ### Create a executable file
-`clang++ -std=c++17 -nostdlib++ -pthread ./main.o $LIBCPP_STATIC`
+```
+clang++ -std=c++17 -nostdlib++ ./main.o -pthread $LIBCPP_STATIC
+```
 
 ## Reference
 https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang1-nostdinc
